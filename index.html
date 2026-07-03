@@ -111,6 +111,7 @@
     }
     .card a {
       align-self: flex-start;
+      margin-top: auto;
       font-size: 0.9rem;
       font-weight: 600;
       color: var(--accent);
@@ -125,6 +126,14 @@
       padding: 32px 0;
       text-align: center;
     }
+    .site-footer {
+      margin-top: 40px;
+      padding-top: 16px;
+      border-top: 1px solid var(--line);
+      font-size: 0.8rem;
+      color: var(--muted);
+    }
+    .site-footer a { color: var(--muted); }
   </style>
 </head>
 <body>
@@ -147,6 +156,13 @@
     </div>
 
     <div class="grid" id="grid"></div>
+
+    <footer class="site-footer">
+      Restaurant data from
+      <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a>
+      contributors, licensed under the
+      <a href="https://opendatacommons.org/licenses/odbl/" target="_blank" rel="noopener">ODbL</a>.
+    </footer>
   </div>
 
   <script src="data.js"></script>
@@ -205,16 +221,22 @@
               escapeHtml(r.name) + ' dish" loading="lazy" ' +
               "onerror=\"this.style.display='none'\">"
           : "";
+        // Build the meta line from whichever fields are present (OSM data is
+        // often missing an area or price), joined by a middot.
+        var bits = [];
+        if (r.area) bits.push(escapeHtml(r.area));
+        if (r.cuisine) bits.push(escapeHtml(r.cuisine));
+        if (r.price) bits.push('<span class="price">' + escapeHtml(r.price) + "</span>");
+        var meta = bits.length ? '<div class="meta">' + bits.join(" · ") + "</div>" : "";
+        var note = r.note ? '<p class="note">' + escapeHtml(r.note) + "</p>" : "";
+        var link = r.url
+          ? '<a href="' + encodeURI(r.url) + '" target="_blank" rel="noopener">Website</a>'
+          : "";
         return '<article class="card">' +
           img +
           '<div class="card-body">' +
             "<h2>" + escapeHtml(r.name) + "</h2>" +
-            '<div class="meta">' +
-              escapeHtml(r.area) + " · " + escapeHtml(r.cuisine) +
-              ' · <span class="price">' + escapeHtml(r.price) + "</span>" +
-            "</div>" +
-            '<p class="note">' + escapeHtml(r.note) + "</p>" +
-            '<a href="' + encodeURI(r.url) + '" target="_blank" rel="noopener">Website</a>' +
+            meta + note + link +
           "</div>" +
           "</article>";
       }).join("");

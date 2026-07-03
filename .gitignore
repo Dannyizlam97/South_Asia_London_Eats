@@ -1,0 +1,6 @@
+# Offline pipeline working files — never deployed, never committed.
+pipeline/raw_osm.json
+pipeline/*.db
+
+# OS / editor noise
+.DS_Store
