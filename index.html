@@ -50,7 +50,9 @@
       letter-spacing: 0.04em;
       flex: 1 1 160px;
     }
-    .filters select {
+    .filters label.search { flex: 2 1 240px; }
+    .filters select,
+    .filters input {
       margin-top: 4px;
       padding: 10px 12px;
       font-size: 1rem;
@@ -58,11 +60,14 @@
       border-radius: 8px;
       background: var(--card);
       color: var(--ink);
+      width: 100%;
     }
+    .filters input::placeholder { color: #aaa; }
     .grid {
       display: grid;
       grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
       gap: 16px;
+      align-items: start; /* cards size to their content — no hollow stretching */
     }
     .card {
       background: var(--card);
@@ -91,9 +96,29 @@
       flex-direction: column;
       flex: 1;
     }
+    .card-head {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 8px;
+    }
+    .monogram {
+      flex: 0 0 auto;
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.1rem;
+      font-weight: 700;
+      color: #fff;
+    }
+    .card-head h2 { margin: 0; }
     .card h2 {
       margin: 0 0 6px;
       font-size: 1.15rem;
+      line-height: 1.25;
     }
     .meta {
       font-size: 0.85rem;
@@ -144,13 +169,16 @@
     </header>
 
     <div class="filters">
-      <label>Area
+      <label class="search">Search
+        <input id="filter-search" type="search" placeholder="Search by name…" autocomplete="off" />
+      </label>
+      <label id="area-field">Area
         <select id="filter-area"><option value="">All areas</option></select>
       </label>
-      <label>Cuisine
+      <label id="cuisine-field">Cuisine
         <select id="filter-cuisine"><option value="">All cuisines</option></select>
       </label>
-      <label>Price
+      <label id="price-field">Price
         <select id="filter-price"><option value="">All prices</option></select>
       </label>
     </div>
@@ -170,10 +198,19 @@
     var els = {
       grid: document.getElementById("grid"),
       count: document.getElementById("count"),
+      search: document.getElementById("filter-search"),
       area: document.getElementById("filter-area"),
       cuisine: document.getElementById("filter-cuisine"),
       price: document.getElementById("filter-price"),
     };
+
+    // Palette for the initial "monogram" shown on cards without a photo.
+    var MONO = ["#b8442a", "#c77d1f", "#3f7d5a", "#7a4a8c", "#2f6f9f", "#a03c5d"];
+    function monogram(name) {
+      var letter = (name.match(/[a-z0-9]/i) || ["?"])[0].toUpperCase();
+      var color = MONO[name.charCodeAt(0) % MONO.length];
+      return '<span class="monogram" style="background:' + color + '">' + letter + "</span>";
+    }
 
     // Populate a <select> with sorted unique values from a field.
     function fillOptions(select, values) {
@@ -201,8 +238,10 @@
     }
 
     function render() {
+      var q = els.search.value.trim().toLowerCase();
       var matches = RESTAURANTS.filter(function (r) {
-        return (!els.area.value || r.area === els.area.value) &&
+        return (!q || r.name.toLowerCase().indexOf(q) !== -1) &&
+               (!els.area.value || r.area === els.area.value) &&
                (!els.cuisine.value || r.cuisine === els.cuisine.value) &&
                (!els.price.value || r.price === els.price.value);
       });
@@ -232,28 +271,46 @@
         var link = r.url
           ? '<a href="' + encodeURI(r.url) + '" target="_blank" rel="noopener">Website</a>'
           : "";
+        // With a photo, show a plain title; without one, pair the title with a
+        // coloured monogram so the card doesn't look empty.
+        var head = r.image
+          ? "<h2>" + escapeHtml(r.name) + "</h2>"
+          : '<div class="card-head">' + monogram(r.name) +
+              "<h2>" + escapeHtml(r.name) + "</h2></div>";
         return '<article class="card">' +
           img +
           '<div class="card-body">' +
-            "<h2>" + escapeHtml(r.name) + "</h2>" +
-            meta + note + link +
+            head + meta + note + link +
           "</div>" +
           "</article>";
       }).join("");
     }
 
-    fillOptions(els.area, unique("area"));
-    fillOptions(els.cuisine, unique("cuisine"));
-    PRICE_ORDER.filter(function (p) { return unique("price").indexOf(p) !== -1; })
-      .forEach(function (p) {
-        var opt = document.createElement("option");
-        opt.value = p; opt.textContent = p;
-        els.price.appendChild(opt);
-      });
+    var areas = unique("area");
+    var cuisines = unique("cuisine");
+    var prices = PRICE_ORDER.filter(function (p) { return unique("price").indexOf(p) !== -1; });
+
+    fillOptions(els.area, areas);
+    fillOptions(els.cuisine, cuisines);
+    prices.forEach(function (p) {
+      var opt = document.createElement("option");
+      opt.value = p; opt.textContent = p;
+      els.price.appendChild(opt);
+    });
+
+    // A dropdown with fewer than two distinct values can't filter anything —
+    // hide it so the bar only shows filters that actually do something.
+    function toggleField(id, values) {
+      document.getElementById(id).style.display = values.length > 1 ? "" : "none";
+    }
+    toggleField("area-field", areas);
+    toggleField("cuisine-field", cuisines);
+    toggleField("price-field", prices);
 
     [els.area, els.cuisine, els.price].forEach(function (sel) {
       sel.addEventListener("change", render);
     });
+    els.search.addEventListener("input", render);
 
     render();
   </script>
